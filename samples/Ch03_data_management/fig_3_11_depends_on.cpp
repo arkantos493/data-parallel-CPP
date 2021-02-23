@@ -4,25 +4,26 @@
 
 #include <CL/sycl.hpp>
 using namespace sycl;
-constexpr int N = 4;
 
 int main() {
-  queue Q;
+  constexpr std::size_t N = 4;
 
-  auto eA = Q.submit([&](handler &h) {
-    h.parallel_for(N, [=](id<1> i) { /*...*/ }); // Task A
+  queue Q{};
+
+  event eA = Q.submit([&](handler& h) {
+    h.parallel_for(N, [=]([[maybe_unused]] id<1> i) { /*...*/ });  // Task A
   });
   eA.wait();
-  auto eB = Q.submit([&](handler &h) {
-    h.parallel_for(N, [=](id<1> i) { /*...*/ }); // Task B
+  event eB = Q.submit([&](handler& h) {
+    h.parallel_for(N, [=]([[maybe_unused]] id<1> i) { /*...*/ });  // Task B
   });
-  auto eC = Q.submit([&](handler &h) {
+  event eC = Q.submit([&](handler& h) {
     h.depends_on(eB);
-    h.parallel_for(N, [=](id<1> i) { /*...*/ }); // Task C
+    h.parallel_for(N, [=]([[maybe_unused]] id<1> i) { /*...*/ });  // Task C
   });
-  auto eD = Q.submit([&](handler &h) {
+  event eD = Q.submit([&](handler& h) {
     h.depends_on({eB, eC});
-    h.parallel_for(N, [=](id<1> i) { /*...*/ }); // Task D
+    h.parallel_for(N, [=]([[maybe_unused]] id<1> i) { /*...*/ });  // Task D
   });
 
   return 0;

@@ -2,9 +2,10 @@
 
 // SPDX-License-Identifier: MIT
 
+#include <exception>
 #include <iostream>
 
-class something_went_wrong {};
+class something_went_wrong : std::exception {};
 
 int main() {
   std::cout << "Hello\n";

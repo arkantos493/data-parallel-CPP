@@ -3,37 +3,43 @@
 // SPDX-License-Identifier: MIT
 
 #include <CL/sycl.hpp>
-#include<array>
+#include <algorithm>
+#include <array>
 using namespace sycl;
-constexpr int N = 42;
 
 int main() {
-  queue Q;
+  constexpr std::size_t N = 42;
+  std::array<int, N> host_array{};
+  host_array.fill(N);
 
-  std::array<int,N> host_array;
-  int *device_array = malloc_device<int>(N, Q);
+  queue Q{};
 
-  for (int i = 0; i < N; i++)
-    host_array[i] = N;
+  int* device_array = malloc_device<int>(N, Q);
 
   // We will learn how to simplify this example later
-  Q.submit([&](handler &h) {
-      // copy hostArray to deviceArray
-      h.memcpy(device_array, &host_array[0], N * sizeof(int));
-    });
+  Q.submit([&](handler& h) {
+    // copy hostArray to deviceArray
+    h.memcpy(device_array, &host_array[0], N * sizeof(int));
+  });
   Q.wait();
 
-  Q.submit([&](handler &h) {
-      h.parallel_for(N, [=](id<1> i) { device_array[i]++; });
-    });
+  Q.submit([&](handler& h) {
+    h.parallel_for(N, [=](id<1> i) { device_array[i]++; });
+  });
   Q.wait();
 
-  Q.submit([&](handler &h) {
-      // copy deviceArray back to hostArray
-      h.memcpy(&host_array[0], device_array, N * sizeof(int));
-    });
+  Q.submit([&](handler& h) {
+    // copy deviceArray back to hostArray
+    h.memcpy(&host_array[0], device_array, N * sizeof(int));
+  });
   Q.wait();
 
   free(device_array, Q);
-  return 0;
+
+  // Check that all outputs match expected value
+  const bool passed =
+      std::all_of(host_array.begin(), host_array.end(),
+                  [](const int i) { return i == static_cast<int>(N + 1); });
+  std::cout << (passed ? "Correct results" : "Wrong results") << '\n';
+  return passed ? 0 : 1;
 }

@@ -4,8 +4,6 @@
 
 #include <CL/sycl.hpp>
 #include <algorithm>
-#include <cstdio>
-#include <cstdlib>
 #include <iostream>
 #include <numeric>
 #include <random>
@@ -17,35 +15,35 @@ using local_accessor =
     accessor<T, dimensions, access::mode::read_write, access::target::local>;
 
 int main() {
-  queue q;
+  constexpr std::size_t N = 128;
+  constexpr std::size_t L = 16;
+  constexpr std::size_t G = N / L;
 
-  const size_t N = 128;
-  const size_t L = 16;
-  const size_t G = N / L;
+  queue Q{};
 
-  int32_t* input = malloc_shared<int32_t>(N, q);
-  int32_t* output = malloc_shared<int32_t>(N, q);
+  int* input = malloc_shared<int>(N, Q);
   std::iota(input, input + N, 1);
+  int* output = malloc_shared<int>(N, Q);
   std::fill(output, output + N, 0);
 
   // Create a temporary allocation that will only be used by the device
-  int32_t* tmp = malloc_device<int32_t>(G, q);
+  int* tmp = malloc_device<int>(G, Q);
 
   // Phase 1: Compute local scans over input blocks
-  q.submit([&](handler& h) {
-     auto local = local_accessor<int32_t, 1>(L, h);
-     h.parallel_for(nd_range<1>(N, L), [=](nd_item<1> it) {
-       int i = it.get_global_id(0);
-       int li = it.get_local_id(0);
+  Q.submit([&](handler& h) {
+     local_accessor<int, 1> local{L, h};
+     h.parallel_for(nd_range<1>{N, L}, [=](nd_item<1> it) {
+       const std::size_t i = it.get_global_id(0);
+       const std::size_t li = it.get_local_id(0);
 
        // Copy input to local memory
        local[li] = input[i];
        it.barrier();
 
        // Perform inclusive scan in local memory
-       for (int32_t d = 0; d <= log2((float)L) - 1; ++d) {
-         uint32_t stride = (1 << d);
-         int32_t update = (li >= stride) ? local[li - stride] : 0;
+       for (std::size_t d = 0; d <= log2(static_cast<float>(L)) - 1; ++d) {
+         const unsigned int stride = (1 << d);
+         const int update = (li >= stride) ? local[li - stride] : 0;
          it.barrier();
          local[li] += update;
          it.barrier();
@@ -61,20 +59,20 @@ int main() {
    }).wait();
 
   // Phase 2: Compute scan over partial results
-  q.submit([&](handler& h) {
-     auto local = local_accessor<int32_t, 1>(G, h);
-     h.parallel_for(nd_range<1>(G, G), [=](nd_item<1> it) {
-       int i = it.get_global_id(0);
-       int li = it.get_local_id(0);
+  Q.submit([&](handler& h) {
+     local_accessor<int, 1> local{G, h};
+     h.parallel_for(nd_range<1>{G, G}, [=](nd_item<1> it) {
+       const std::size_t i = it.get_global_id(0);
+       const std::size_t li = it.get_local_id(0);
 
        // Copy input to local memory
        local[li] = tmp[i];
        it.barrier();
 
        // Perform inclusive scan in local memory
-       for (int32_t d = 0; d <= log2((float)G) - 1; ++d) {
-         uint32_t stride = (1 << d);
-         int32_t update = (li >= stride) ? local[li - stride] : 0;
+       for (std::size_t d = 0; d <= log2(static_cast<float>(G)) - 1; ++d) {
+         const unsigned int stride = (1 << d);
+         const int update = (li >= stride) ? local[li - stride] : 0;
          it.barrier();
          local[li] += update;
          it.barrier();
@@ -86,27 +84,28 @@ int main() {
    }).wait();
 
   // Phase 3: Update local scans using partial results
-  q.parallel_for(nd_range<1>(N, L), [=](nd_item<1> it) {
-     int g = it.get_group(0);
+  Q.parallel_for(nd_range<1>{N, L}, [=](nd_item<1> it) {
+     const std::size_t g = it.get_group(0);
      if (g > 0) {
-       int i = it.get_global_id(0);
+       const std::size_t i = it.get_global_id(0);
        output[i] += tmp[g - 1];
      }
    }).wait();
 
   // Check that all outputs match serial execution
   bool passed = true;
-  int32_t gold = 0;
-  for (int i = 0; i < N; ++i) {
+  int gold = 0;
+  for (std::size_t i = 0; i < N; ++i) {
     gold += input[i];
     if (output[i] != gold) {
       passed = false;
+      break;
     }
   }
-  std::cout << ((passed) ? "SUCCESS" : "FAILURE") << "\n";
+  std::cout << (passed ? "Correct results" : "Wrong results") << '\n';
 
-  free(tmp, q);
-  free(output, q);
-  free(input, q);
-  return (passed) ? 0 : 1;
+  free(tmp, Q);
+  free(output, Q);
+  free(input, Q);
+  return passed ? 0 : 1;
 }

@@ -8,11 +8,16 @@ add_book_sample(
     SOURCES fig_16_6_stream_triad.cpp)
 
 add_book_sample(
+        TEST
+        TARGET fig_16_10_stream_triad_first_touch
+        SOURCES fig_16_10_stream_triad_first_touch.cpp)
+
+add_book_sample(
     TEST
-    TARGET fig_16_12_forward_dep  
+    TARGET fig_16_12_forward_dep
     SOURCES fig_16_12_forward_dep.cpp)
 
 add_book_sample(
     TEST
-    TARGET fig_16_18_vector_swizzle  
+    TARGET fig_16_18_vector_swizzle
     SOURCES fig_16_18_vector_swizzle.cpp)

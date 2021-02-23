@@ -4,19 +4,20 @@
 
 #include <CL/sycl.hpp>
 using namespace sycl;
-constexpr int N = 4;
 
 int main() {
+  constexpr std::size_t N = 4;
+
   queue Q{property::queue::in_order()};
 
   Q.submit([&](handler& h) {
-    h.parallel_for(N, [=](id<1> i) { /*...*/ });  // Task A
+    h.parallel_for(N, [=]([[maybe_unused]] id<1> i) { /*...*/ });  // Task A
   });
   Q.submit([&](handler& h) {
-    h.parallel_for(N, [=](id<1> i) { /*...*/ });  // Task B
+    h.parallel_for(N, [=]([[maybe_unused]] id<1> i) { /*...*/ });  // Task B
   });
   Q.submit([&](handler& h) {
-    h.parallel_for(N, [=](id<1> i) { /*...*/ });  // Task C
+    h.parallel_for(N, [=]([[maybe_unused]] id<1> i) { /*...*/ });  // Task C
   });
 
   return 0;

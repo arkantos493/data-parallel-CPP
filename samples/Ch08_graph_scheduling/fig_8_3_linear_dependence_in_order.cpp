@@ -3,22 +3,27 @@
 // SPDX-License-Identifier: MIT
 
 #include <CL/sycl.hpp>
+#include <iostream>
 using namespace sycl;
-constexpr int N = 42;
 
 int main() {
-  queue Q{property::queue::in_order()};
+  constexpr std::size_t N = 42;
 
-  int *data = malloc_shared<int>(N, Q);
+  queue Q{property::queue::in_order{}};
+
+  int* data = malloc_shared<int>(N, Q);
 
   Q.parallel_for(N, [=](id<1> i) { data[i] = 1; });
 
   Q.single_task([=]() {
-      for (int i = 1; i < N; i++)
-        data[0] += data[i];
-    });
+    for (std::size_t i = 1; i < N; ++i) {
+      data[0] += data[i];
+    }
+  });
   Q.wait();
 
-  assert(data[0] == N);
-  return 0;
+  // Check that all outputs match serial execution.
+  const bool passed = data[0] == static_cast<int>(N);
+  std::cout << (passed ? "Correct results" : "Wrong results") << '\n';
+  return passed ? 0 : 1;
 }

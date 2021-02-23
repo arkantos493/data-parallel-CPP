@@ -3,35 +3,34 @@
 // SPDX-License-Identifier: MIT
 
 #include <CL/sycl.hpp>
-#include <CL/sycl/INTEL/fpga_extensions.hpp> // For fpga_selector
+#include <CL/sycl/INTEL/fpga_extensions.hpp>  // For fpga_selector
 using namespace sycl;
 
-int generate_incremental_random_number(const int& state) {
+int generate_incremental_random_number([[maybe_unused]] const int state) {
   return 0;  // Useless non-RNG generator as proxy!
 };
 
 int main() {
-  constexpr int size = 64; 
-  constexpr int seed = 0; 
+  constexpr std::size_t size = 64;
+  constexpr int seed = 0;
 
-  queue Q{ INTEL::fpga_emulator_selector{} };
+  queue Q{INTEL::fpga_emulator_selector{}};
 
-  buffer <int> B{ range{size} };
+  buffer<int> B{range{size}};
 
-  Q.submit([&](handler &h){
-      accessor output(B,h);
+  Q.submit([&](handler& h) {
+    accessor output{B, h};
 
-// BEGIN CODE SNIP
-      h.single_task([=]() {
-        int state = seed;
-        for (int i=0; i < size; i++) {
-          state = generate_incremental_random_number(state);
-          output[i] = state;
-        }
-        });
-// END CODE SNIP
-      });
+    // BEGIN CODE SNIP
+    h.single_task([=]() {
+      int state = seed;
+      for (std::size_t i = 0; i < size; ++i) {
+        state = generate_incremental_random_number(state);
+        output[i] = state;
+      }
+    });
+    // END CODE SNIP
+  });
 
   return 0;
 }
-

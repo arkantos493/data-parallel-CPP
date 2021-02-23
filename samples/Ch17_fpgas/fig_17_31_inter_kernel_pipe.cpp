@@ -3,60 +3,57 @@
 // SPDX-License-Identifier: MIT
 
 #include <CL/sycl.hpp>
-#include <CL/sycl/INTEL/fpga_extensions.hpp> // For fpga_selector
+#include <CL/sycl/INTEL/fpga_extensions.hpp>  // For fpga_selector
 #include <array>
+#include <numeric>
 using namespace sycl;
 
 int main() {
-  constexpr int count = 1024; 
-  std::array<int, count> in_array;
-
-  // Initialize input array
-  for (int i=0; i < count; i++) { in_array[i] = i;}
+  constexpr std::size_t count = 1024;
+  std::array<int, count> in_array{};
+  std::iota(in_array.begin(), in_array.end(), 0);
 
   // Buffer initialized from in_array (std::array)
-  buffer <int> B_in{ in_array };
+  buffer B_in{in_array};
 
   // Uninitialized buffer with count elements
-  buffer <int> B_out{ range{count} };
+  buffer<int> B_out{range{count}};
 
   // Acquire queue to emulated FPGA device
-  queue Q{ INTEL::fpga_emulator_selector{} };
+  queue Q{INTEL::fpga_emulator_selector{}};
 
-// BEGIN CODE SNIP
+  // BEGIN CODE SNIP
   // Create alias for pipe type so that consistent across uses
   using my_pipe = pipe<class some_pipe, int>;
 
   // ND-range kernel
   Q.submit([&](handler& h) {
-      auto A = accessor(B_in, h);
+    accessor A{B_in, h};
 
-      h.parallel_for(count, [=](auto idx) {
-          my_pipe::write( A[idx] );
-          });
-      });
+    h.parallel_for(count, [=](id<1> idx) { my_pipe::write(A[idx]); });
+  });
 
   // Single_task kernel
   Q.submit([&](handler& h) {
-      auto A = accessor(B_out, h);
+    accessor A{B_out, h};
 
-      h.single_task([=]() {
-        for (int i=0; i < count; i++) {
-          A[i] = my_pipe::read();
-        }
-      });
+    h.single_task([=]() {
+      for (std::size_t i = 0; i < count; ++i) {
+        A[i] = my_pipe::read();
+      }
     });
+  });
 
-// END CODE SNIP
+  // END CODE SNIP
 
-  auto A = host_accessor(B_out);
-  for (int i=0; i < count; i++) {
-    if (A[i] != i) {
-      std::cout << "Failure on element " << i << "\n";
-      return 1;
+  host_accessor A{B_out};
+  bool passed = true;
+  for (std::size_t i = 0; i < count; ++i) {
+    if (A[i] != static_cast<int>(i)) {
+      passed = false;
+      break;
     }
   }
-  std::cout << "Passed!\n";
-  return 0;
+  std::cout << (passed ? "Correct results" : "Wrong results") << '\n';
+  return passed ? 0 : 1;
 }
-

@@ -4,29 +4,27 @@
 
 #include <CL/sycl.hpp>
 #include <iostream>
+#include <numeric>
 using namespace sycl;
 
 int main() {
-  constexpr size_t size = 16;
-  std::array<int, size> data;
-
-  for (int i = 0; i < size; i++) {
-    data[i] = i;
-  }
+  constexpr std::size_t size = 16;
+  std::array<int, size> data{};
+  std::iota(data.begin(), data.end(), 0);
 
   {
     buffer data_buf{data};
 
-// BEGIN CODE SNIP
+    // BEGIN CODE SNIP
     // Note: This must select a device that supports interop with OpenCL kernel
     // objects!
-    queue Q{ cpu_selector{} };
+    queue Q{cpu_selector{}};
     context sc = Q.get_context();
 
     const char* kernelSource =
         R"CLC(
             kernel void add(global int* data) {
-                int index = get_global_id(0);
+                const int index = get_global_id(0);
                 data[index] = data[index] + 1;
             }
         )CLC";
@@ -37,7 +35,7 @@ int main() {
     cl_kernel k = clCreateKernel(p, "add", nullptr);
 
     std::cout << "Running on device: "
-              << Q.get_device().get_info<info::device::name>() << "\n";
+              << Q.get_device().get_info<info::device::name>() << '\n';
 
     Q.submit([&](handler& h) {
       accessor data_acc{data_buf, h};
@@ -49,16 +47,17 @@ int main() {
     clReleaseContext(c);
     clReleaseProgram(p);
     clReleaseKernel(k);
-// END CODE SNIP
+    // END CODE SNIP
   }
 
-  for (int i = 0; i < size; i++) {
-    if (data[i] != i + 1) {
-      std::cout << "Results did not validate at index " << i << "!\n";
-      return -1;
+  // Check that all outputs match serial execution.
+  bool passed = true;
+  for (std::size_t i = 0; i < size; ++i) {
+    if (data[i] != static_cast<int>(i + 1)) {
+      passed = false;
+      break;
     }
   }
-
-  std::cout << "Success!\n";
-  return 0;
+  std::cout << (passed ? "Correct results" : "Wrong results") << '\n';
+  return passed ? 0 : 1;
 }

@@ -4,42 +4,42 @@
 
 #include <CL/sycl.hpp>
 #include <algorithm>
+#include <array>
 #include <iostream>
 
 using namespace sycl;
 
 int main() {
-  queue Q;
+  constexpr std::size_t N = 32;
+  constexpr std::size_t M = 4;
 
-  const size_t N = 32;
-  const size_t M = 4;
+  queue Q{};
 
   int* data = malloc_shared<int>(N, Q);
   std::fill(data, data + N, 0);
 
   Q.parallel_for(N, [=](id<1> i) {
-     int j = i % M;
+     const std::size_t j = i % M;
      data[j] += 1;
    }).wait();
 
-  for (int i = 0; i < N; ++i) {
-    std::cout << "data [" << i << "] = " << data[i] << "\n";
+  for (std::size_t i = 0; i < N; ++i) {
+    std::cout << "data [" << i << "] = " << data[i] << '\n';
   }
 
-  bool passed = true;
-  int* gold = (int*) malloc(N * sizeof(int));
-  std::fill(gold, gold + N, 0);
-  for (int i = 0; i < N; ++i) {
-    int j = i % M;
+  std::array<int, N> gold{};
+  for (std::size_t i = 0; i < N; ++i) {
+    const std::size_t j = i % M;
     gold[j] += 1;
   }
-  for (int i = 0; i < N; ++i) {
+  bool passed = true;
+  for (std::size_t i = 0; i < N; ++i) {
     if (data[i] != gold[i]) {
       passed = false;
+      break;
     }
   }
-  std::cout << ((passed) ? "SUCCESS\n" : "FAILURE\n");
-  free(gold);
+  std::cout << (passed ? "Correct results" : "Wrong results") << '\n';
   free(data, Q);
-  return (passed) ? 0 : 1;
+  return passed ? 0 : 1;
 }

@@ -6,7 +6,7 @@
 using namespace sycl;
 
 int main() {
-  buffer<int> B{ range{16} };
+  buffer<int> B{range{16}};
 
   // ERROR: Create sub-buffer larger than size of parent buffer
   // An exception is thrown from within the buffer constructor
@@ -14,4 +14,3 @@ int main() {
 
   return 0;
 }
-

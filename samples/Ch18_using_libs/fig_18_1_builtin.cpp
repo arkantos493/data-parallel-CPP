@@ -6,47 +6,43 @@
 #include <array>
 #include <cmath>
 #include <iostream>
+#include <numeric>
 using namespace sycl;
 
 int main() {
-  constexpr int size = 9;
-  std::array<double, size> A;
-  std::array<double, size> B;
+  constexpr std::size_t size = 9;
+  std::array<double, size> A{};
+  std::iota(A.begin(), A.end(), 0);
+  std::array<double, size> B{};
+  std::iota(B.begin(), B.end(), 0);
 
   bool pass = true;
 
-  for (int i = 0; i < size; ++i) { A[i] = i; B[i] = i; }
-
-  queue Q;
+  queue Q{};
 
   range sz{size};
 
-  buffer<double> bufA(A);
-  buffer<double> bufB(B);
-  buffer<bool>   bufP(&pass, 1);
+  buffer bufA{A};
+  buffer bufB{B};
+  buffer<bool> bufP{&pass, 1};
 
-  Q.submit([&](handler &h) {
-    accessor accA{ bufA, h};
-    accessor accB{ bufB, h};
-    accessor accP{ bufP, h};
+  Q.submit([&](handler& h) {
+    accessor accA{bufA, h};
+    accessor accB{bufB, h};
+    accessor accP{bufP, h};
 
     h.parallel_for(size, [=](id<1> idx) {
-      accA[idx] = std::log(accA[idx]);
+      accA[idx] = sycl::log(accA[idx]);
       accB[idx] = sycl::log(accB[idx]);
-      if (!sycl::isequal( accA[idx], accB[idx]) ) {
+      if (!sycl::isequal(accA[idx], accB[idx])) {
         accP[0] = false;
       }
     });
   });
 
-  host_accessor host_A(bufA);
-  host_accessor host_P(bufP);
-
-  if (host_P[0] && host_A[4] == std::log(4.00)) {
-    std::cout << "Passed\n";
-  } else {
-    std::cout << "Failed\n";
-  }
-
-  return 0;
+  host_accessor host_A{bufA};
+  host_accessor host_P{bufP};
+  const bool passed = host_P[0] && host_A[4] == std::log(4.0);
+  std::cout << (passed ? "Correct results" : "Wrong results") << '\n';
+  return passed ? 0 : 1;
 }

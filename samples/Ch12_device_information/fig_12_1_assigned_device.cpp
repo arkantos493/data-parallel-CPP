@@ -7,14 +7,12 @@
 using namespace sycl;
 
 int main() {
+  // BEGIN CODE SNIP
+  queue Q{};
 
-// BEGIN CODE SNIP
-  queue Q;
-
-  std::cout << "By default, we are running on "
-    << Q.get_device().get_info<info::device::name>() << "\n";
-// END CODE SNIP
+  std::cout << "By default, we are running on:\n"
+            << Q.get_device().get_info<info::device::name>() << '\n';
+  // END CODE SNIP
 
   return 0;
 }
-

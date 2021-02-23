@@ -3,22 +3,23 @@
 // SPDX-License-Identifier: MIT
 
 #define SYCL_SIMPLE_SWIZZLES
-#include <array>
 #include <CL/sycl.hpp>
+#include <array>
+#include <iostream>
 using namespace sycl;
 
 int main() {
-// BEGIN CODE SNIP
-  constexpr int size = 16;
+  // BEGIN CODE SNIP
+  constexpr std::size_t size = 16;
 
-  std::array<float4, size> input;
-  for (int i = 0; i < size; i++) {
+  std::array<float4, size> input{};
+  for (std::size_t i = 0; i < size; ++i) {
     input[i] = float4(8.0f, 6.0f, 2.0f, i);
   }
 
-  buffer B(input);
+  buffer B{input};
 
-  queue Q;
+  queue Q{};
   Q.submit([&](handler& h) {
     accessor A{B, h};
 
@@ -30,26 +31,24 @@ int main() {
     //  elements. The swizzle need not be the same size as the original
     //  vector
     h.parallel_for(size, [=](id<1> idx) {
-      auto   b  = A[idx];
-      float  w  = b.w();
+      float4 b = A[idx];
+      float w = b.w();
       float4 sw = b.xyzw();
-      sw = b.xyzw() * sw.wzyx();;
+      sw = b.xyzw() * sw.wzyx();
       sw = sw + w;
       A[idx] = sw.xyzw();
     });
   });
-// END CODE SNIP
+  // END CODE SNIP
 
-
-  host_accessor hostAcc(B);
-
-  for (int i = 0; i < size; i++) {
-    if ( hostAcc[i].y() != 12.0f + i ) {
-      std::cout << "Failed\n";
-      return -1;
+  host_accessor hostAcc{B};
+  bool passed = true;
+  for (std::size_t i = 0; i < size; ++i) {
+    if (hostAcc[i].y() != 12.0f + i) {
+      passed = false;
+      break;
     }
   }
-
-  std::cout << "Passed\n";
-  return 0;
+  std::cout << (passed ? "Correct results" : "Wrong results") << '\n';
+  return passed ? 0 : 1;
 }

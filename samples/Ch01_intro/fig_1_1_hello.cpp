@@ -3,27 +3,24 @@
 // SPDX-License-Identifier: MIT
 
 #include <CL/sycl.hpp>
+#include <cstring>
 #include <iostream>
+#include <string_view>
 using namespace sycl;
 
-const std::string secret {
-  "Ifmmp-!xpsme\"\012J(n!tpssz-!Ebwf/!"
-  "J(n!bgsbje!J!dbo(u!ep!uibu/!.!IBM\01" };
-
-const auto sz = secret.size();
-
 int main() {
-  queue Q;
+  const std::string_view secret{
+      "Ifmmp-!xpsme\"\012#J(n!tpssz-!Ebwf/!"
+      "J(n!bgsbje!J!dbo(u!ep!uibu/#!.!IBM"};
+  const std::size_t sz = secret.size();
 
-  char *result = malloc_shared<char>(sz, Q);
-  std::memcpy(result,secret.data(),sz);
+  queue Q{};
 
-  Q.parallel_for(sz,[=](auto& i) {
-      result[i] -= 1;
-      }).wait();
+  char* result = malloc_shared<char>(sz, Q);
+  std::memcpy(result, secret.data(), sz);
 
-  std::cout << result << "\n";
+  Q.parallel_for(sz, [=](id<1> i) { result[i] -= 1; }).wait();
+
+  std::cout << result << '\n';
   return 0;
 }
-
-

@@ -8,12 +8,13 @@ using namespace sycl;
 
 int main() {
   // Create queue on whatever default device that the implementation
-  // chooses. Implicit use of the default_selector. 
-  queue Q;
+  // chooses. Implicit use of the default_selector.
+  queue Q{};
 
-  std::cout << "Selected device: " <<
-  Q.get_device().get_info<info::device::name>() << "\n";
+  std::cout << "Selected device: "
+            << Q.get_device().get_info<info::device::name>() << '\n';
+  std::cout << " -> Device vendor: "
+            << Q.get_device().get_info<info::device::vendor>() << '\n';
 
   return 0;
 }
-
