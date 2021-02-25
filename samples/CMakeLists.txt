@@ -17,7 +17,7 @@ function(add_book_sample)
 
     add_executable(${BOOK_SAMPLE_TARGET} ${BOOK_SAMPLE_SOURCES})
 
-    target_compile_options(${BOOK_SAMPLE_TARGET} PRIVATE -fsycl -fsycl-unnamed-lambda -ferror-limit=1 -Wall -Wextra -Wpedantic -Wno-zero-length-array -Wno-pass-failed -Werror)
+    target_compile_options(${BOOK_SAMPLE_TARGET} PRIVATE -fsycl -fsycl-unnamed-lambda -ferror-limit=1 -Wall -Wextra -Wpedantic -Wno-zero-length-array -Wno-pass-failed -Wno-unused-parameter)# -Werror)
     # Passing -fsycl via target_link_libraries for older versions of CMake:
     #target_link_options(${BOOK_SAMPLE_TARGET} PRIVATE -fsycl )
     target_link_libraries(${BOOK_SAMPLE_TARGET} PRIVATE sycl -fsycl )
