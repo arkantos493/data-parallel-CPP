@@ -19,8 +19,9 @@ namespace dpstd = dpl;
 #endif
 
 int main() {
-  queue Q{};
-  buffer<int> buf{1000};
+  constexpr std::size_t size = 1000;
+
+  buffer<int> buf{size};
 
   auto buf_begin = dpstd::begin(buf);
   auto buf_end = dpstd::end(buf);
@@ -28,5 +29,14 @@ int main() {
   auto policy = dpstd::execution::make_device_policy<class fill>(Q);
   std::fill(policy, buf_begin, buf_end, 42);
 
-  return 0;
+  host_accessor h_acc{buf};
+  bool passed = true;
+  for (std::size_t i = 0; i < size; ++i) {
+    if (h_acc[i] != 42) {
+      passed = false;
+      break;
+    }
+  }
+  std::cout << (passed ? "Correct results" : "Wrong results") << '\n';
+  return passed ? 0 : 1;
 }

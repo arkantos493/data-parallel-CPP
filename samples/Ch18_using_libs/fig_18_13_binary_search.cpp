@@ -21,13 +21,13 @@ namespace dpstd = dpl;
 #endif
 
 int main() {
-  buffer<std::uint64_t> kB{range<1>(10)};
-  buffer<std::uint64_t> vB{range<1>(5)};
-  buffer<std::uint64_t> rB{range<1>(5)};
+  buffer<std::uint64_t> kB{range<1>{10}};
+  buffer<std::uint64_t> vB{range<1>{5}};
+  buffer<std::uint64_t> rB{range<1>{5}};
 
   {
-    accessor k{kB};
-    accessor v{vB};
+    host_accessor k{kB};
+    host_accessor v{vB};
 
     // Initialize data, sorted
     k[0] = 0;
@@ -56,16 +56,14 @@ int main() {
   auto r_beg = dpstd::begin(rB);
 
   // create named policy from existing one
-  auto policy = dpstd::execution::make_device_policy<class bSearch>(
-      dpstd::execution::default_policy);
+  auto policy = dpstd::execution::make_device_policy<class bSearch>(queue{});
 
   // call algorithm
   dpstd::binary_search(policy, k_beg, k_end, v_beg, v_end, r_beg);
 
   // check data
-  accessor r{rB};
-  if ((r[0] == false) && (r[1] == true) && (r[2] == false) && (r[3] == true) &&
-      (r[4] == true)) {
+  host_accessor r{rB};
+  if (!r[0] && r[1] && !r[2] && r[3] && r[4]) {
     std::cout << "Passed. \nRun on "
               << policy.queue().get_device().get_info<info::device::name>()
               << '\n';

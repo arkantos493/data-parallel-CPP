@@ -9,6 +9,7 @@
 #endif
 
 #include <CL/sycl.hpp>
+#include <algorithm>
 #include <oneapi/dpl/algorithm>
 #include <oneapi/dpl/execution>
 
@@ -18,7 +19,7 @@ namespace dpstd = dpl;
 #endif
 
 int main() {
-  constexpr int n = 10;
+  constexpr std::size_t n = 10;
 
   queue Q{};
   usm_allocator<int, usm::alloc::shared> alloc(Q.get_context(), Q.get_device());
@@ -28,5 +29,8 @@ int main() {
             78);
   Q.wait();
 
-  return 0;
+  const bool passed =
+      std::all_of(vec.begin(), vec.end(), [](const int i) { return i == 78; });
+  std::cout << (passed ? "Correct results" : "Wrong results") << '\n';
+  return passed ? 0 : 1;
 }
